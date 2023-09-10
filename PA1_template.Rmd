@@ -43,10 +43,9 @@ median(steps_day$x)
 
 Now it is going to be showed the average of steps per interval of time across all the days. To do that, it is necessary to make 
 a dataframe with the mean of steps per interval first:
-
-steps_interval <- aggregate(activity_clean$steps, list(activity_clean$interval), mean)
-steps_interval
 ```{r}
+steps_interval <- aggregate(activity_clean$steps, list(activity_clean$interval), mean)
+
 library(dygraphs)
 dygraph(steps_interval, main='Average number of steps per interval',
         xlab='Time intervals', ylab='Average of steps')
@@ -112,6 +111,7 @@ steps_weekday <- activity_filled[activity_filled$weekday %in% weekday,]
 steps_interval_weekday <- aggregate(steps_weekday$steps, list(steps_weekday$interval), sum)
 head(steps_interval_weekday)
 
+library(dplyr)
 steps_interval_weekday$part_week <- 'Weekday'
 steps_interval_weekend$part_week <- 'Weekend'
 steps_interval_wdwk <- bind_rows(steps_interval_weekday, steps_interval_weekend)
@@ -122,8 +122,6 @@ head(steps_interval_wdwk)
 The time series plot can be created:
 ```{r}
 library(ggplot2)
-ggplot(steps_interval_wdwk, aes(factor(Group.1), x, fill=part_week))
-
 ggplot(steps_interval_wdwk, aes(x = Group.1, y = x)) +
   geom_line(position='identity') +
   facet_grid(. ~ part_week)+
