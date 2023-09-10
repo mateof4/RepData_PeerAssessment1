@@ -4,22 +4,148 @@ output:
   html_document:
     keep_md: true
 ---
-
-
 ## Loading and preprocessing the data
+First, the file is unziped and saved into a dataframe variable. 
+```{r setoptions, echo=TRUE}
+unzip('activity.zip')
+activity <- read.csv('activity.csv')
+```
 
-
+It will be necessary to have a NA clean dataframe of the data:
+```{r}
+activity_clean <- na.omit(activity)
+head(activity_clean)
+```
 
 ## What is mean total number of steps taken per day?
+Before showing the mean total number of steps per day, the sum of steps per day is showed:
+First, a dataframe with the number of steps per day is created.
+```{r}
+steps_day <- aggregate(activity_clean$steps, list(activity_clean$date), sum)
+library(stringr)
+steps_day$Group.1 <- as.numeric(str_sub(steps_day$Group.1, start= -2))
+head(steps_day)
+```
 
+The histogram showing the number of steps per day (lacking values because of NAs):
+```{r}
+barplot(height=steps_day$x, names=steps_day$Group.1,
+        main='Total number of steps', xlab='Days 10/2012', ylab='Steps') 
+```
 
+The mean and median of the steps per day:
+```{r}
+mean(steps_day$x)
+median(steps_day$x)
+```
 
 ## What is the average daily activity pattern?
 
+Now it is going to be showed the average of steps per interval of time across all the days. To do that, it is necessary to make 
+a dataframe with the mean of steps per interval first:
 
+steps_interval <- aggregate(activity_clean$steps, list(activity_clean$interval), mean)
+steps_interval
+```{r}
+library(dygraphs)
+dygraph(steps_interval, main='Average number of steps per interval',
+        xlab='Time intervals', ylab='Average of steps')
+```
+
+It is interesting to know the time interval that contains, on average, the maximum number of steps:
+```{r}
+steps_interval[steps_interval$x==max(steps_interval$x),]
+```
 
 ## Imputing missing values
+There is only one column in the dataframe with NAs:
+```{r}
+sum(is.na(activity))
+sum(is.na(activity$steps))
+```
 
+The chosen strategy to fill the NAs values is to introduce in each empty time interval the mean of in that interval for the 
+rest of days.
+```{r}
+steps_interval <- aggregate(activity_clean$steps, list(activity_clean$interval), mean)
+head(steps_interval)
+
+activity_filled <- activity
+activity_filled$steps <- ifelse(is.na(activity_filled$steps),
+                         steps_interval$x[match(activity$interval, steps_interval$Group.1)],
+                         activity_filled$steps)
+```
+
+To make the histogram it is necessary to create a dataframe wit the sum of steps per day with the updated dataframe.
+```{r}
+steps_day_filled <- aggregate(activity_filled$steps, list(activity_filled$date), sum)
+steps_day_filled$Group.1 <- as.numeric(str_sub(steps_day_filled$Group.1, start= -2))
+head(steps_day_filled)
+```
+
+Finally, the histogram and mean and median values can be obtained. 
+```{r}
+barplot(height=steps_day_filled$x, names=steps_day_filled$Group.1,
+        main='Total number of steps per day filling NAs', xlab='Days 10/2012', ylab='Steps') 
+
+mean(steps_day_filled$x)
+median(steps_day_filled$x)
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+It is necessary to create a dataframe with the intervals and number of steps having a column that specifies if it is weekday or weekend.
+```{r}
+activity_filled$weekday <- weekdays(as.POSIXct(activity_filled$date))
+head(activity_filled)
+
+days_w <- unique(activity_filled$weekday)
+weekday <- c(days_w[1:5])
+weekend <- c(days_w[6:7])
+
+steps_weekend <- activity_filled[activity_filled$weekday %in% weekend,]
+steps_interval_weekend <- aggregate(steps_weekend$steps, list(steps_weekend$interval), sum)
+head(steps_interval_weekend)
+
+steps_weekday <- activity_filled[activity_filled$weekday %in% weekday,]
+steps_interval_weekday <- aggregate(steps_weekday$steps, list(steps_weekday$interval), sum)
+head(steps_interval_weekday)
+
+steps_interval_weekday$part_week <- 'Weekday'
+steps_interval_weekend$part_week <- 'Weekend'
+steps_interval_wdwk <- bind_rows(steps_interval_weekday, steps_interval_weekend)
+head(steps_interval_wdwk)
+```
+
+
+The time series plot can be created:
+```{r}
+library(ggplot2)
+ggplot(steps_interval_wdwk, aes(factor(Group.1), x, fill=part_week))
+
+ggplot(steps_interval_wdwk, aes(x = Group.1, y = x)) +
+  geom_line(position='identity') +
+  facet_grid(. ~ part_week)+
+  labs(title='Number of steps per interval (NAs filled)', x='Interval', y='Steps')+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
